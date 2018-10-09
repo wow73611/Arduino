@@ -1,12 +1,12 @@
 #include <OneWire.h>
 
 // DS18S20 Temperature chip i/o
-OneWire ds(10);  // on pin 10
+OneWire ds(4);
 
 void setup(void) {
   // initialize inputs/outputs
   // start serial port
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop(void) {
@@ -14,11 +14,13 @@ void loop(void) {
   byte present = 0;
   byte data[12];
   byte addr[8];
-
-  ds.reset_search();
+  float celsius, fahrenheit;
+    
+  //ds.reset_search();
   if ( !ds.search(addr)) {
-      Serial.print("No more addresses.\n");
+      Serial.println("No more addresses.\n");
       ds.reset_search();
+      delay(250);
       return;
   }
 
@@ -67,4 +69,27 @@ void loop(void) {
   Serial.print(" CRC=");
   Serial.print( OneWire::crc8( data, 8), HEX);
   Serial.println();
-}
+
+  // Convert the data to actual temperature
+  unsigned int raw = (data[1] << 8) | data[0];
+  
+  if (addr[0] == 0x10) {
+    raw = raw << 3; // 9 bit resolution default
+    if (data[7] == 0x10){
+      raw = (raw & 0xFFF0) + 12 - data[6];
+    }
+  } else {
+    byte cfg = (data[4] & 0x60);
+    if (cfg == 0x00) raw = raw & ~7; // 9 bit resolution, 93.75 ms
+    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+   }
+   celsius = (float)raw / 16.0;
+   fahrenheit = celsius * 1.8 + 32.0;
+   Serial.print("Temperature = ");
+   Serial.print(celsius);
+   Serial.print(" Celsius, ");
+   Serial.print(fahrenheit);
+   Serial.println(" Fahrenheit");
+   Serial.println();
+ }
