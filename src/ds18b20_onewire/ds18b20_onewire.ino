@@ -24,7 +24,7 @@ void loop(void) {
       return;
   }
 
-  Serial.print("R=");
+  Serial.print("ROM=");
   for( i = 0; i < 8; i++) {
     Serial.print(addr[i], HEX);
     Serial.print(" ");
@@ -35,15 +35,19 @@ void loop(void) {
       return;
   }
 
-  if ( addr[0] == 0x10) {
+  switch (addr[0]) {
+    case 0x10:
       Serial.print("Device is a DS18S20 family device.\n");
-  }
-  else if ( addr[0] == 0x28) {
+      break;
+    case 0x28:
       Serial.print("Device is a DS18B20 family device.\n");
-  }
-  else {
+      break;
+    case 0x22:
+      Serial.print("Device is a DS1822 family device.\n");
+      break;
+    default:
       Serial.print("Device family is not recognized: 0x");
-      Serial.println(addr[0],HEX);
+      Serial.println(addr[0], HEX);
       return;
   }
 
@@ -59,7 +63,7 @@ void loop(void) {
   ds.write(0xBE);         // Read Scratchpad
 
   Serial.print("P=");
-  Serial.print(present,HEX);
+  Serial.print(present, HEX);
   Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
@@ -67,7 +71,7 @@ void loop(void) {
     Serial.print(" ");
   }
   Serial.print(" CRC=");
-  Serial.print( OneWire::crc8( data, 8), HEX);
+  Serial.print(OneWire::crc8(data, 8), HEX);
   Serial.println();
 
   // Convert the data to actual temperature
@@ -80,16 +84,19 @@ void loop(void) {
     }
   } else {
     byte cfg = (data[4] & 0x60);
+    // at lower res, the low bits are undefined, so let's zero them
     if (cfg == 0x00) raw = raw & ~7; // 9 bit resolution, 93.75 ms
     else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
     else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-   }
-   celsius = (float)raw / 16.0;
-   fahrenheit = celsius * 1.8 + 32.0;
-   Serial.print("Temperature = ");
-   Serial.print(celsius);
-   Serial.print(" Celsius, ");
-   Serial.print(fahrenheit);
-   Serial.println(" Fahrenheit");
-   Serial.println();
- }
+    // default is 12 bit resolution, 750 ms conversion time
+  }
+
+  celsius = (float)raw / 16.0;
+  fahrenheit = celsius * 1.8 + 32.0;
+  Serial.print("Temperature = ");
+  Serial.print(celsius);
+  Serial.print(" Celsius, ");
+  Serial.print(fahrenheit);
+  Serial.println(" Fahrenheit");
+  Serial.println();
+}
